@@ -13,9 +13,9 @@
 {
   "@context": "https://schema.org",
   "@type": "Person",
-  "name": "Arise Patel",
-  "jobTitle": "Full-Stack Developer",
-  "email": "mailto:arisepatel97@gmail.com",
+  "name": "Bhavy patel",
+  "jobTitle": "Full-Stack web Developer",
+  "email": "mailto:bhavy3728@gmail.com",
   "url": "https://github.com/bhavy-rgb",
   "sameAs": ["https://github.com/bhavy-rgb", "https://www.linkedin.com/in/bhavy-patel-064a61399"],
   "knowsAbout": ["React", "TypeScript", "Node.js", "Express", "MongoDB", "Rust", "WebAssembly"],
@@ -579,7 +579,6 @@ setTimeout(function(){ if(!window.__apInit) document.documentElement.classList.r
   <button class="chip" type="button" data-scene="tunnel" aria-pressed="false">Tunnel</button>
   <button class="chip" type="button" data-scene="shapes" aria-pressed="false">Shapes</button>
   <button class="chip" type="button" data-scene="rain" aria-pressed="false">Rain</button>
-  <button class="chip" type="button" data-scene="prism" aria-pressed="false">Prism</button>
 </div>
 
 <main id="top">
@@ -711,7 +710,7 @@ setTimeout(function(){ if(!window.__apInit) document.documentElement.classList.r
   <section class="contact" id="contact">
     <div class="wrap">
       <span class="label">05 / Contact</span>
-      <a class="mail" href="mailto:arisepatel97@gmail.com">arisepatel97@gmail.com</a>
+      <a class="mail" href="mailto:bhavy3728@gmail.com">bhavy3728@gmail.com</a>
       <p class="contact-note">Got a role, a brief, or a question? Email is the fastest route.</p>
       <div class="links">
         <a class="btn" href="https://github.com/bhavy-rgb" target="_blank" rel="noopener">GitHub <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7 17 17 7M9 7h8v8"/></svg></a>
@@ -724,7 +723,7 @@ setTimeout(function(){ if(!window.__apInit) document.documentElement.classList.r
 
 <footer>
   <div class="wrap" style="display:flex;flex-wrap:wrap;gap:12px;justify-content:space-between;align-items:center;width:100%">
-    <span>&copy; 2026 Arise Patel</span>
+    <span>&copy; 2026 Bhavy Patel</span>
     <span>Single HTML file &middot; no build step &middot; <a href="#top">Back to top</a></span>
   </div>
 </footer>
@@ -995,7 +994,7 @@ setTimeout(function(){ if(!window.__apInit) document.documentElement.classList.r
     function disposeGroup(g) {
       g.traverse(function (o) {
         if (o.geometry) o.geometry.dispose();
-        if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(function (m) { if (m.map) m.map.dispose(); m.dispose(); });
+        if (o.material) (Array.isArray(o.material) ? o.material : [o.material]).forEach(function (m) { m.dispose(); });
         if (o.isInstancedMesh && o.dispose) o.dispose();
       });
     }
@@ -1394,214 +1393,7 @@ setTimeout(function(){ if(!window.__apInit) document.documentElement.classList.r
       };
     }
 
-    /* ---- scene 9: prism dispersion onto a monitor ---- */
-    function makePrism() {
-      var SW = 5.6, SH = 3.5;                      /* monitor screen size in monitor units */
-      var LAM = [0.70, 0.62, 0.58, 0.53, 0.47, 0.44, 0.41];   /* wavelengths, micrometres */
-      var RAYC = ['#ff3b30', '#ff9f0a', '#ffd60a', '#30d158', '#0a84ff', '#5e5ce6', '#bf5af2'];
-      var S3 = 0.8660254, PHI0 = -0.35;
-      var g = new T.Group();
-      var wide = true, u = 1, Rp = 1.5, H1x = 0, H1y = 0, mx = 0, my = 0, xL = 0, i;
-
-      function mat(color, op) {
-        return new T.MeshBasicMaterial({ color: color, transparent: true, opacity: op, depthTest: false, depthWrite: false, side: T.DoubleSide });
-      }
-      function quad(color, op, order) {
-        var geo = new T.BufferGeometry(), arr = new Float32Array(12);
-        geo.setAttribute('position', new T.BufferAttribute(arr, 3));
-        geo.setIndex([0, 1, 2, 0, 2, 3]);
-        var m = new T.Mesh(geo, mat(color, op));
-        m.userData.arr = arr; m.frustumCulled = false; m.renderOrder = order;
-        return m;
-      }
-      function setQuad(q, x0, y0, x1, y1, w) {
-        var dx = x1 - x0, dy = y1 - y0, l = Math.sqrt(dx * dx + dy * dy) || 1;
-        var px = (-dy / l) * w / 2, py = (dx / l) * w / 2, a = q.userData.arr;
-        a[0] = x0 + px; a[1] = y0 + py; a[2] = 0; a[3] = x0 - px; a[4] = y0 - py; a[5] = 0;
-        a[6] = x1 - px; a[7] = y1 - py; a[8] = 0; a[9] = x1 + px; a[10] = y1 + py; a[11] = 0;
-        q.geometry.attributes.position.needsUpdate = true;
-      }
-
-      /* ---- physics: trace a ray through a 60-degree prism, Cauchy dispersion for BK7 glass ---- */
-      function nOf(l) { return 1.5046 + 0.0042 / (l * l); }
-      function refract(dx, dy, nx, ny, eta) {
-        var ci = -(dx * nx + dy * ny), k = 1 - eta * eta * (1 - ci * ci);
-        if (k < 0) return null;
-        var c = eta * ci - Math.sqrt(k);
-        return [eta * dx + c * nx, eta * dy + c * ny];
-      }
-      function trace(phi, K) {
-        var cs = Math.cos(phi), sn = Math.sin(phi);
-        function rot(x, y) { return [x * cs - y * sn, x * sn + y * cs]; }
-        var m1 = rot(-S3 * Rp / 2, Rp * 0.25);
-        var pc = [H1x - m1[0], H1y - m1[1]];
-        var N1 = rot(-S3, 0.5), N2 = rot(S3, 0.5), v0 = rot(0, Rp);
-        var p2x = pc[0] + v0[0], p2y = pc[1] + v0[1];
-        var rays = [], sum = 0, cnt = 0, k, n, t1, t2, s, hx, hy, a;
-        for (k = 0; k < LAM.length; k++) {
-          n = nOf(LAM[k]);
-          t1 = refract(1, 0, N1[0], N1[1], 1 / n);
-          if (!t1) { rays.push({ ok: false }); continue; }
-          s = ((p2x - H1x) * N2[0] + (p2y - H1y) * N2[1]) / (t1[0] * N2[0] + t1[1] * N2[1]);
-          hx = H1x + s * t1[0]; hy = H1y + s * t1[1];
-          t2 = refract(t1[0], t1[1], -N2[0], -N2[1], n);
-          if (!t2) { rays.push({ ok: false }); continue; }
-          a = Math.atan2(t2[1], t2[0]);
-          rays.push({ ok: true, x: hx, y: hy, a: a });
-          sum += a; cnt++;
-        }
-        var am = cnt ? sum / cnt : 0, mxh = 0, myh = 0, ymin = 1e9, ymax = -1e9;
-        for (k = 0; k < rays.length; k++) {
-          if (!rays[k].ok) continue;
-          rays[k].a = am + (rays[k].a - am) * K;
-          rays[k].hy = rays[k].y + Math.tan(rays[k].a) * (xL - rays[k].x);
-          mxh += rays[k].x; myh += rays[k].y;
-          if (rays[k].hy < ymin) ymin = rays[k].hy;
-          if (rays[k].hy > ymax) ymax = rays[k].hy;
-        }
-        return { pc: pc, rays: rays, hx: cnt ? mxh / cnt : H1x, hy: cnt ? myh / cnt : H1y, ymin: ymin, ymax: ymax, cnt: cnt };
-      }
-
-      /* ---- prism ---- */
-      var prismG = new T.Group();
-      var shape = new T.Shape();
-      shape.moveTo(0, 1); shape.lineTo(-S3, -0.5); shape.lineTo(S3, -0.5); shape.closePath();
-      var pgeo = new T.ExtrudeGeometry(shape, { depth: 1, bevelEnabled: false });
-      pgeo.translate(0, 0, -0.5);
-      var pFill = new T.Mesh(pgeo, mat(0xffffff, 0.1)); pFill.renderOrder = 6;
-      var pEdgeMat = new T.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.9, depthTest: false, depthWrite: false });
-      var pEdges = new T.LineSegments(new T.EdgesGeometry(pgeo), pEdgeMat); pEdges.renderOrder = 7;
-      prismG.add(pFill); prismG.add(pEdges); g.add(prismG);
-
-      /* ---- light paths ---- */
-      var beamGlow = quad(0xffffff, 0.14, 5), beam = quad(0xffffff, 0.95, 5);
-      var inner = quad(0xffffff, 0.45, 5);
-      g.add(beamGlow); g.add(beam); g.add(inner);
-      var rayGlow = [], rayCore = [];
-      for (i = 0; i < LAM.length; i++) {
-        rayGlow.push(quad(RAYC[i], 0.2, 5)); rayCore.push(quad(RAYC[i], 0.95, 5));
-        g.add(rayGlow[i]); g.add(rayCore[i]);
-      }
-
-      /* ---- monitor ---- */
-      var mon = new T.Group();
-      var bezel = new T.Mesh(new T.PlaneGeometry(SW + 0.36, SH + 0.5), mat(0x14161c, 1)); bezel.position.set(0, -0.1, 0); bezel.renderOrder = 1;
-      var bezelEdgeMat = new T.LineBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.35, depthTest: false, depthWrite: false });
-      var bezelEdge = new T.LineSegments(new T.EdgesGeometry(new T.PlaneGeometry(SW + 0.36, SH + 0.5)), bezelEdgeMat); bezelEdge.position.set(0, -0.1, 0); bezelEdge.renderOrder = 1;
-      var neck = new T.Mesh(new T.PlaneGeometry(0.5, 1.0), mat(0x101218, 1)); neck.position.set(0, -(SH / 2 + 0.35 + 0.5), 0); neck.renderOrder = 0;
-      var foot = new T.Mesh(new T.PlaneGeometry(2.2, 0.14), mat(0x101218, 1)); foot.position.set(0, -(SH / 2 + 0.35 + 1.07), 0); foot.renderOrder = 0;
-      var ledMat = mat(0x888888, 1);
-      var led = new T.Mesh(new T.CircleGeometry(0.045, 14), ledMat); led.position.set(0, -(SH / 2 + 0.3), 0); led.renderOrder = 3;
-
-      var cv = document.createElement('canvas'); cv.width = 1024; cv.height = 640;
-      var x2 = cv.getContext('2d'), j;
-      x2.fillStyle = '#06080b'; x2.fillRect(0, 0, 1024, 640);
-      x2.strokeStyle = 'rgba(255,255,255,0.05)'; x2.lineWidth = 1;
-      for (j = 0; j <= 16; j++) { x2.beginPath(); x2.moveTo(j * 64, 0); x2.lineTo(j * 64, 640); x2.stroke(); }
-      for (j = 0; j <= 10; j++) { x2.beginPath(); x2.moveTo(0, j * 64); x2.lineTo(1024, j * 64); x2.stroke(); }
-      var grd = x2.createLinearGradient(154, 0, 870, 0);
-      var stops = ['#8b5cf6', '#3b82f6', '#06b6d4', '#22c55e', '#eab308', '#f97316', '#ef4444'];
-      for (j = 0; j < stops.length; j++) grd.addColorStop(j / (stops.length - 1), stops[j]);
-      x2.globalAlpha = 0.55; x2.fillStyle = grd; x2.fillRect(154, 470, 716, 46); x2.globalAlpha = 1;
-      x2.font = '15px monospace'; x2.textAlign = 'center'; x2.fillStyle = '#9aa0ab'; x2.strokeStyle = '#9aa0ab';
-      for (j = 0; j <= 6; j++) {
-        var tx = 154 + (j * 50 / 300) * 716;
-        x2.beginPath(); x2.moveTo(tx, 520); x2.lineTo(tx, 530); x2.stroke();
-        x2.fillText(String(400 + j * 50), tx, 552);
-      }
-      x2.fillText('wavelength (nm)', 512, 582);
-      x2.textAlign = 'left'; x2.fillStyle = '#e6e2da'; x2.font = '17px monospace';
-      x2.fillText('SPECTRUM  \u00b7  BK7 CROWN GLASS  \u00b7  60\u00b0 PRISM', 36, 46);
-      x2.fillStyle = '#6b7280'; x2.font = '14px monospace';
-      x2.fillText('n(\u03bb) = 1.5046 + 0.0042 / \u03bb\u00b2', 36, 72);
-      var tex = new T.CanvasTexture(cv);
-      var screen = new T.Mesh(new T.PlaneGeometry(SW, SH), new T.MeshBasicMaterial({ map: tex, depthTest: false, depthWrite: false }));
-      screen.renderOrder = 2;
-
-      var bandGlow = [], bandCore = [];
-      for (i = 0; i < LAM.length; i++) {
-        var bgm = new T.Mesh(new T.PlaneGeometry(0.62, 1.5), mat(RAYC[i], 0.5)); bgm.material.blending = T.AdditiveBlending; bgm.renderOrder = 3; bgm.position.y = 0.03;
-        var bcm = new T.Mesh(new T.PlaneGeometry(0.07, 1.5), mat(RAYC[i], 0.95)); bcm.material.blending = T.AdditiveBlending; bcm.renderOrder = 3; bcm.position.y = 0.03;
-        bandGlow.push(bgm); bandCore.push(bcm); mon.add(bgm); mon.add(bcm);
-      }
-
-      var gc = document.createElement('canvas'); gc.width = 64; gc.height = 4;
-      var gx = gc.getContext('2d'), gg = gx.createLinearGradient(0, 0, 64, 0);
-      gg.addColorStop(0, 'rgba(255,255,255,0)'); gg.addColorStop(0.5, 'rgba(255,255,255,0.9)'); gg.addColorStop(1, 'rgba(255,255,255,0)');
-      gx.fillStyle = gg; gx.fillRect(0, 0, 64, 4);
-      var gtex = new T.CanvasTexture(gc);
-      var GW = 0.9, GK = SH * 0.35;
-      var ggeo = new T.BufferGeometry();
-      ggeo.setAttribute('position', new T.BufferAttribute(new Float32Array([0, -SH / 2, 0, GW, -SH / 2, 0, GW + GK, SH / 2, 0, GK, SH / 2, 0]), 3));
-      ggeo.setAttribute('uv', new T.BufferAttribute(new Float32Array([0, 0, 1, 0, 1, 1, 0, 1]), 2));
-      ggeo.setIndex([0, 1, 2, 0, 2, 3]);
-      var glare = new T.Mesh(ggeo, new T.MeshBasicMaterial({ map: gtex, transparent: true, opacity: 0.1, depthTest: false, depthWrite: false, blending: T.AdditiveBlending, side: T.DoubleSide }));
-      glare.renderOrder = 4; glare.frustumCulled = false;
-
-      mon.add(neck); mon.add(foot); mon.add(bezel); mon.add(bezelEdge); mon.add(screen); mon.add(led); mon.add(glare);
-      g.add(mon);
-
-      function clamp(v, a, b) { return v < a ? a : v > b ? b : v; }
-
-      return {
-        group: g, fig: 'Fig. 09 \u2014 Dispersion through a 60\u00b0 prism \u00b7 BK7 \u00b7 spread exaggerated',
-        resize: function () {
-          wide = view.aspect > 1.15;
-          u = wide ? Math.min(view.hw / 8.5, view.hh / 4.2) : view.hw / 6.2;
-          Rp = 1.5 * u;
-          prismG.scale.setScalar(Rp);
-          mon.scale.setScalar(u);
-          H1x = wide ? -view.hw * 0.34 : -view.hw * 0.72;
-          H1y = wide ? view.hh * 0.18 : view.hh * 0.34;
-          mx = wide ? view.hw * 0.56 : view.hw * 0.52;
-          xL = mx - (SW / 2 + 0.18) * u;
-          var tr = trace(PHI0, 8), sum = 0, c = 0, k;
-          for (k = 0; k < tr.rays.length; k++) if (tr.rays[k].ok) { sum += tr.rays[k].hy; c++; }
-          my = clamp(c ? sum / c : 0, -view.hh * 0.7, view.hh * 0.7);
-          mon.position.set(mx, my, 0);
-        },
-        update: function (t) {
-          var phi = clamp(PHI0 + Math.sin(t * 0.25) * 0.09 + ptr.y * 0.1 + focus.s * focus.y * 0.12, -0.55, -0.16);
-          var K = 8 + focus.s * 6;
-          var tr = trace(phi, K), k, r, q, w = 1 + focus.s * 0.7;
-          var blend = light ? T.NormalBlending : T.AdditiveBlending;
-          prismG.position.set(tr.pc[0], tr.pc[1], 0);
-          prismG.rotation.z = phi;
-          pFill.material.color.copy(C.ink); pFill.material.opacity = light ? 0.07 : 0.1;
-          pEdgeMat.color.copy(C.ink).lerp(C.fx, focus.s);
-          var bx0 = -view.hw * 1.15;
-          beam.material.color.copy(C.ink).lerp(C.fx, focus.s * 0.5);
-          beamGlow.material.color.copy(beam.material.color);
-          beam.material.blending = beamGlow.material.blending = blend;
-          setQuad(beam, bx0, H1y, H1x, H1y, 0.05 * u * w);
-          setQuad(beamGlow, bx0, H1y, H1x, H1y, 0.2 * u * w);
-          inner.material.color.copy(beam.material.color);
-          inner.material.blending = blend;
-          setQuad(inner, H1x, H1y, tr.hx, tr.hy, 0.04 * u);
-          var ymin = tr.ymin, span = tr.ymax - tr.ymin || 1;
-          for (k = 0; k < LAM.length; k++) {
-            r = tr.rays[k];
-            rayCore[k].visible = rayGlow[k].visible = bandCore[k].visible = bandGlow[k].visible = !!r.ok;
-            if (!r.ok) continue;
-            rayCore[k].material.blending = rayGlow[k].material.blending = blend;
-            rayCore[k].material.opacity = 0.9; rayGlow[k].material.opacity = light ? 0.16 : 0.22 + focus.s * 0.15;
-            setQuad(rayCore[k], r.x, r.y, xL, r.hy, 0.04 * u * w);
-            setQuad(rayGlow[k], r.x, r.y, xL, r.hy, 0.17 * u * w);
-            q = (r.hy - ymin) / span;
-            bandCore[k].position.x = bandGlow[k].position.x = (q - 0.5) * SW * 0.7;
-            bandGlow[k].material.opacity = 0.42 + focus.s * 0.4;
-            bandGlow[k].scale.x = 1 + focus.s * 0.5;
-          }
-          var range = SW - GW - GK;
-          glare.position.x = -SW / 2 + clamp(0.5 + 0.35 * Math.sin(t * 0.22) + ptr.x * 0.2 + focus.s * 0.1, 0, 1) * range;
-          glare.material.opacity = 0.09 + focus.s * 0.12;
-          ledMat.color.copy(C.accent).multiplyScalar(0.5 + focus.s * 0.5);
-          bezelEdgeMat.color.copy(C.ink); bezelEdgeMat.opacity = light ? 0.5 : 0.3;
-        }
-      };
-    }
-
-    var factories = { prism: makePrism, knot: makeKnot, network: makeNetwork, waves: makeWaves, board: makeBoard, galaxy: makeGalaxy, tunnel: makeTunnel, shapes: makeShapes, rain: makeRain };
+    var factories = { knot: makeKnot, network: makeNetwork, waves: makeWaves, board: makeBoard, galaxy: makeGalaxy, tunnel: makeTunnel, shapes: makeShapes, rain: makeRain };
     var dock = document.querySelector('.dock');
     var dockBtns = dock ? Array.prototype.slice.call(dock.querySelectorAll('[data-scene]')) : [];
     var figEl = document.querySelector('.fig');
@@ -1651,8 +1443,8 @@ setTimeout(function(){ if(!window.__apInit) document.documentElement.classList.r
       scene.add(root3);
       readColors();
       measure();
-      var startKey = 'prism';
-      try { startKey = localStorage.getItem('ap-scene') || 'prism'; } catch (e) {}
+      var startKey = 'knot';
+      try { startKey = localStorage.getItem('ap-scene') || 'knot'; } catch (e) {}
       setScene(startKey, true);
       renderer.render(scene, camera);
     } catch (err) {
